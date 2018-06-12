@@ -9,6 +9,7 @@ from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
+from multiprocessing import Pool
 
 if len(sys.argv) < 2:
     exit(1)
@@ -33,10 +34,9 @@ def convert_pdf_to_txt(path):
     device = TextConverter(rsrcmgr, retstr, codec='utf-8', laparams=laparams)
     fp = open(path, 'rb')
     interpreter = PDFPageInterpreter(rsrcmgr, device)
-    caching = True
     pagenos=set()
 
-    for page in PDFPage.get_pages(fp, pagenos, caching=caching, check_extractable=True):
+    for page in PDFPage.get_pages(fp, pagenos, maxpages=1, caching=True, check_extractable=True):
         interpreter.process_page(page)
         text = retstr.getvalue()
         fp.close()
@@ -47,6 +47,9 @@ def convert_pdf_to_txt(path):
 if not os.path.exists('folder'):
     os.mkdir('target')
 
-for infile in os.listdir('folder'):
+def convert(infile):
     outfile = open('target/' + infile[:-4] + '.txt', 'w')
     outfile.write(convert_pdf_to_txt('folder/' + infile))
+
+pool = Pool(10)
+pool.map(convert, os.listdir('folder'))
